@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IQuoteImportService, QuoteImportService>();
         services.AddScoped<ICorporateActionService, CorporateActionService>();
         services.AddScoped<IPriceSeriesProvider, PriceSeriesService>();
+        services.AddScoped<IReturnAnalysisService, ReturnAnalysisService>();
 
         return services;
     }
