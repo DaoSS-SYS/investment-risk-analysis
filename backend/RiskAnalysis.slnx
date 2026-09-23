@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RiskAnalysis.Application/RiskAnalysis.Application.csproj" />
+    <Project Path="src/RiskAnalysis.Domain/RiskAnalysis.Domain.csproj" />
+    <Project Path="src/RiskAnalysis.Infrastructure/RiskAnalysis.Infrastructure.csproj" />
+    <Project Path="src/RiskAnalysis.RiskEngine/RiskAnalysis.RiskEngine.csproj" />
+    <Project Path="src/RiskAnalysis.WebApi/RiskAnalysis.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RiskAnalysis.RiskEngine.Tests/RiskAnalysis.RiskEngine.Tests.csproj" />
+  </Folder>
+</Solution>
