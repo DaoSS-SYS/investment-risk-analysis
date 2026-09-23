@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RiskAnalysis.Application.Abstractions;
+using RiskAnalysis.Infrastructure.ExternalData.Cbr;
 using RiskAnalysis.Infrastructure.ExternalData.Moex;
 using RiskAnalysis.Infrastructure.Persistence;
 using RiskAnalysis.Infrastructure.Services;
@@ -26,6 +27,8 @@ public static class DependencyInjection
         services.AddScoped<IPriceSeriesProvider, PriceSeriesService>();
         services.AddScoped<IReturnAnalysisService, ReturnAnalysisService>();
         services.AddScoped<IVarAnalysisService, VarAnalysisService>();
+        services.AddScoped<IMacroImportService, MacroImportService>();
+        services.AddScoped<IPerformanceAnalysisService, PerformanceAnalysisService>();
 
         return services;
     }
@@ -65,6 +68,13 @@ public static class DependencyInjection
 
             client.BaseAddress = new Uri(options.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("RiskAnalysis/1.0 (VKR)");
+        });
+
+        // Открытые сервисы Банка России: ключевая ставка как безрисковая ставка.
+        services.AddHttpClient<IMacroDataClient, CbrClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(60);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("RiskAnalysis/1.0 (VKR)");
         });
     }

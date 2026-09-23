@@ -16,11 +16,38 @@ public class ImportController : ControllerBase
 {
     private readonly RiskAnalysisDbContext _db;
     private readonly IQuoteImportService _importService;
+    private readonly IMacroImportService _macroImport;
 
-    public ImportController(RiskAnalysisDbContext db, IQuoteImportService importService)
+    public ImportController(
+        RiskAnalysisDbContext db,
+        IQuoteImportService importService,
+        IMacroImportService macroImport)
     {
         _db = db;
         _importService = importService;
+        _macroImport = macroImport;
+    }
+
+    /// <summary>
+    /// Загружает ключевую ставку Банка России за период. Ставка применяется
+    /// в качестве безрисковой при расчёте коэффициентов эффективности
+    /// и параметров модели CAPM.
+    /// </summary>
+    /// <param name="from">Начало периода. По умолчанию — десять лет назад.</param>
+    /// <param name="to">Конец периода. По умолчанию — текущая дата.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    [HttpPost("key-rate")]
+    public async Task<ActionResult<ImportResult>> ImportKeyRate(
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        CancellationToken cancellationToken = default)
+    {
+        var dateTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var dateFrom = from ?? dateTo.AddYears(-10);
+
+        var result = await _macroImport.ImportKeyRateAsync(dateFrom, dateTo, cancellationToken);
+
+        return Ok(result);
     }
 
     /// <summary>

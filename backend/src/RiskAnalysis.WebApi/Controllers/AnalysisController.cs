@@ -15,11 +15,16 @@ public class AnalysisController : ControllerBase
 {
     private readonly IReturnAnalysisService _analysis;
     private readonly IVarAnalysisService _var;
+    private readonly IPerformanceAnalysisService _performance;
 
-    public AnalysisController(IReturnAnalysisService analysis, IVarAnalysisService varAnalysis)
+    public AnalysisController(
+        IReturnAnalysisService analysis,
+        IVarAnalysisService varAnalysis,
+        IPerformanceAnalysisService performance)
     {
         _analysis = analysis;
         _var = varAnalysis;
+        _performance = performance;
     }
 
     /// <summary>
@@ -91,6 +96,93 @@ public class AnalysisController : ControllerBase
         {
             var result = await _var.CompareMethodsAsync(
                 id, dateFrom, dateTo, confidence, horizon, value, scenarios, cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Рассчитывает коэффициенты эффективности вложения (Шарпа, Сортино,
+    /// Трейнора, информационный, Кальмара), просадки и параметры модели CAPM
+    /// относительно эталонного портфеля. Безрисковой ставкой служит ключевая
+    /// ставка Банка России.
+    /// </summary>
+    /// <param name="id">Идентификатор инструмента.</param>
+    /// <param name="benchmarkId">
+    /// Идентификатор эталонного портфеля. Без него параметры модели CAPM
+    /// не рассчитываются.
+    /// </param>
+    /// <param name="from">Начало периода. По умолчанию — десять лет назад.</param>
+    /// <param name="to">Конец периода. По умолчанию — текущая дата.</param>
+    /// <param name="includeDrawdownSeries">Включить кривую просадки.</param>
+    [HttpGet("instruments/{id:int}/performance")]
+    public async Task<ActionResult<PerformanceAnalysisResult>> AnalyzePerformance(
+        int id,
+        [FromQuery] int? benchmarkId,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] bool includeDrawdownSeries = false,
+        CancellationToken cancellationToken = default)
+    {
+        var dateTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var dateFrom = from ?? dateTo.AddYears(-10);
+
+        try
+        {
+            var result = await _performance.AnalyzeAsync(
+                id, benchmarkId, dateFrom, dateTo, includeDrawdownSeries, cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Выполняет корреляционный анализ группы инструментов и количественно
+    /// оценивает эффект диверсификации: сопоставляет волатильность
+    /// равновзвешенного портфеля со средневзвешенной волатильностью
+    /// составляющих.
+    /// </summary>
+    /// <param name="ids">Идентификаторы инструментов через запятую.</param>
+    /// <param name="from">Начало периода.</param>
+    /// <param name="to">Конец периода.</param>
+    [HttpGet("correlation")]
+    public async Task<ActionResult<CorrelationAnalysisResult>> AnalyzeCorrelation(
+        [FromQuery] string ids,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        CancellationToken cancellationToken = default)
+    {
+        var parsed = (ids ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(part => int.TryParse(part, out var value) ? value : (int?)null)
+            .Where(value => value is not null)
+            .Select(value => value!.Value)
+            .Distinct()
+            .ToList();
+
+        if (parsed.Count < 2)
+        {
+            return BadRequest(new
+            {
+                error = "Укажите не менее двух идентификаторов инструментов, например ids=1,2,3."
+            });
+        }
+
+        var dateTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var dateFrom = from ?? dateTo.AddYears(-10);
+
+        try
+        {
+            var result = await _performance.AnalyzeCorrelationAsync(
+                parsed, dateFrom, dateTo, cancellationToken);
 
             return Ok(result);
         }
