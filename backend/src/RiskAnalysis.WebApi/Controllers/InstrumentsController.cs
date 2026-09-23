@@ -19,15 +19,18 @@ public class InstrumentsController : ControllerBase
     private readonly RiskAnalysisDbContext _db;
     private readonly IMarketDataClient _marketData;
     private readonly IQuoteImportService _importService;
+    private readonly IPriceSeriesProvider _priceSeries;
 
     public InstrumentsController(
         RiskAnalysisDbContext db,
         IMarketDataClient marketData,
-        IQuoteImportService importService)
+        IQuoteImportService importService,
+        IPriceSeriesProvider priceSeries)
     {
         _db = db;
         _marketData = marketData;
         _importService = importService;
+        _priceSeries = priceSeries;
     }
 
     /// <summary>Возвращает все инструменты справочника системы.</summary>
@@ -231,5 +234,28 @@ public class InstrumentsController : ControllerBase
             .ToListAsync(cancellationToken);
 
         return Ok(quotes);
+    }
+
+    /// <summary>
+    /// Возвращает ценовой ряд инструмента, подготовленный для расчётов:
+    /// с применённой корректировкой на корпоративные действия.
+    /// Именно этот ряд используется всеми методами оценки риска.
+    /// </summary>
+    /// <param name="id">Идентификатор инструмента.</param>
+    /// <param name="from">Начало периода.</param>
+    /// <param name="to">Конец периода.</param>
+    [HttpGet("{id:int}/series")]
+    public async Task<ActionResult<PriceSeries>> GetSeries(
+        int id,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        CancellationToken cancellationToken)
+    {
+        var dateTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var dateFrom = from ?? dateTo.AddYears(-10);
+
+        var series = await _priceSeries.GetSeriesAsync(id, dateFrom, dateTo, cancellationToken);
+
+        return Ok(series);
     }
 }

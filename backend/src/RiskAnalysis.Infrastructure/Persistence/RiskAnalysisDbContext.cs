@@ -21,6 +21,7 @@ public class RiskAnalysisDbContext : DbContext
     public DbSet<Position> Positions => Set<Position>();
     public DbSet<RiskCalculation> RiskCalculations => Set<RiskCalculation>();
     public DbSet<ImportLog> ImportLogs => Set<ImportLog>();
+    public DbSet<CorporateAction> CorporateActions => Set<CorporateAction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

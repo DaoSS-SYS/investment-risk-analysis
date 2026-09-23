@@ -22,6 +22,8 @@ public static class DependencyInjection
         AddExternalDataSources(services, configuration);
 
         services.AddScoped<IQuoteImportService, QuoteImportService>();
+        services.AddScoped<ICorporateActionService, CorporateActionService>();
+        services.AddScoped<IPriceSeriesProvider, PriceSeriesService>();
 
         return services;
     }
