@@ -1,7 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using RiskAnalysis.Application.Abstractions;
+using RiskAnalysis.Infrastructure.ExternalData.Moex;
 using RiskAnalysis.Infrastructure.Persistence;
+using RiskAnalysis.Infrastructure.Services;
 
 namespace RiskAnalysis.Infrastructure;
 
@@ -13,6 +17,16 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
+    {
+        AddPersistence(services, configuration);
+        AddExternalDataSources(services, configuration);
+
+        services.AddScoped<IQuoteImportService, QuoteImportService>();
+
+        return services;
+    }
+
+    private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException(
@@ -32,7 +46,22 @@ public static class DependencyInjection
             // общепринятом соглашении об именовании в PostgreSQL.
             options.UseSnakeCaseNamingConvention();
         });
+    }
 
-        return services;
+    private static void AddExternalDataSources(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<MoexIssOptions>(configuration.GetSection(MoexIssOptions.SectionName));
+
+        // Типизированный клиент: время ожидания и базовый адрес берутся
+        // из конфигурации, управление временем жизни соединений выполняет
+        // фабрика IHttpClientFactory.
+        services.AddHttpClient<IMarketDataClient, MoexIssClient>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<IOptions<MoexIssOptions>>().Value;
+
+            client.BaseAddress = new Uri(options.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("RiskAnalysis/1.0 (VKR)");
+        });
     }
 }
