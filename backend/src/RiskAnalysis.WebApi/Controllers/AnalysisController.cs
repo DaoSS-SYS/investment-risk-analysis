@@ -14,8 +14,13 @@ namespace RiskAnalysis.WebApi.Controllers;
 public class AnalysisController : ControllerBase
 {
     private readonly IReturnAnalysisService _analysis;
+    private readonly IVarAnalysisService _var;
 
-    public AnalysisController(IReturnAnalysisService analysis) => _analysis = analysis;
+    public AnalysisController(IReturnAnalysisService analysis, IVarAnalysisService varAnalysis)
+    {
+        _analysis = analysis;
+        _var = varAnalysis;
+    }
 
     /// <summary>
     /// Рассчитывает ряд доходностей инструмента и его описательные статистики,
@@ -50,6 +55,46 @@ public class AnalysisController : ControllerBase
             return Ok(result);
         }
         catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Рассчитывает стоимостную меру риска VaR и ожидаемые потери CVaR
+    /// по инструменту всеми реализованными методами: параметрическим,
+    /// историческим и тремя разновидностями метода Монте-Карло.
+    /// Результаты сопоставляются между собой.
+    /// </summary>
+    /// <param name="id">Идентификатор инструмента.</param>
+    /// <param name="from">Начало периода выборки. По умолчанию — десять лет назад.</param>
+    /// <param name="to">Конец периода выборки. По умолчанию — текущая дата.</param>
+    /// <param name="confidence">Уровень доверия. По умолчанию 0,99.</param>
+    /// <param name="horizon">Горизонт оценки в торговых днях. По умолчанию один день.</param>
+    /// <param name="value">Стоимость позиции. По умолчанию один миллион рублей.</param>
+    /// <param name="scenarios">Число сценариев метода Монте-Карло.</param>
+    [HttpGet("instruments/{id:int}/var")]
+    public async Task<ActionResult<VarComparisonResult>> CalculateVar(
+        int id,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] double confidence = 0.99,
+        [FromQuery] int horizon = 1,
+        [FromQuery] double value = 1_000_000.0,
+        [FromQuery] int scenarios = 100_000,
+        CancellationToken cancellationToken = default)
+    {
+        var dateTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var dateFrom = from ?? dateTo.AddYears(-10);
+
+        try
+        {
+            var result = await _var.CompareMethodsAsync(
+                id, dateFrom, dateTo, confidence, horizon, value, scenarios, cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
         {
             return BadRequest(new { error = ex.Message });
         }
