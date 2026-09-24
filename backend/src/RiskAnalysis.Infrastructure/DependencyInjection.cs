@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RiskAnalysis.Application.Abstractions;
+using RiskAnalysis.Infrastructure.BackgroundProcessing;
 using RiskAnalysis.Infrastructure.ExternalData.Cbr;
 using RiskAnalysis.Infrastructure.ExternalData.Moex;
 using RiskAnalysis.Infrastructure.Persistence;
@@ -29,6 +30,14 @@ public static class DependencyInjection
         services.AddScoped<IVarAnalysisService, VarAnalysisService>();
         services.AddScoped<IMacroImportService, MacroImportService>();
         services.AddScoped<IPerformanceAnalysisService, PerformanceAnalysisService>();
+        services.AddScoped<IPortfolioService, PortfolioService>();
+        services.AddScoped<IPortfolioRiskService, PortfolioRiskService>();
+        services.AddScoped<ICalculationService, CalculationService>();
+
+        // Очередь асинхронных расчётов существует в единственном экземпляре
+        // на всё приложение; обработчик очереди — фоновая служба.
+        services.AddSingleton<ICalculationQueue, CalculationQueue>();
+        services.AddHostedService<CalculationWorker>();
 
         return services;
     }
