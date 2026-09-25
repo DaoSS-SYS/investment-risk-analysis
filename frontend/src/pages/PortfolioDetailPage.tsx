@@ -29,6 +29,7 @@ import dayjs from 'dayjs'
 import type { ColumnsType } from 'antd/es/table'
 
 import { api, describeError } from '../api/client'
+import StressTestPanel from '../components/StressTestPanel'
 import type { Position, PositionRiskContribution, VarResult } from '../api/types'
 import {
   describeVarMethod,
@@ -542,6 +543,11 @@ export default function PortfolioDetailPage() {
           </Space>
         )}
       </Card>
+
+      <StressTestPanel
+        portfolioId={portfolioId}
+        disabled={!data || data.positions.length === 0}
+      />
 
       <Modal
         title="Добавление позиции"

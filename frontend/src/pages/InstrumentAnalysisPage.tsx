@@ -19,6 +19,7 @@ import { useParams } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
 
 import { api, describeError } from '../api/client'
+import BacktestPanel from '../components/BacktestPanel'
 import type { VarEstimate } from '../api/types'
 import {
   formatCount,
@@ -412,6 +413,7 @@ export default function InstrumentAnalysisPage() {
           </Typography.Paragraph>
         </Card>
       )}
+      <BacktestPanel instrumentId={instrumentId} />
     </Space>
   )
 }

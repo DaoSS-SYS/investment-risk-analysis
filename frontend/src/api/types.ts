@@ -354,3 +354,114 @@ export interface SystemInfo {
   quoteCount: number
   portfolioCount: number
 }
+
+// ---------------------------------------------------------------------------
+// Бэктестирование моделей оценки риска
+// ---------------------------------------------------------------------------
+
+export type BaselZone = 'Green' | 'Yellow' | 'Red'
+
+export interface BacktestPoint {
+  date: string
+  actualReturn: number
+  varEstimate: number
+  isViolation: boolean
+}
+
+export interface KupiecTestResult {
+  statistic: number
+  pValue: number
+  criticalValue: number
+  isRejected: boolean
+  conclusion: string
+}
+
+export interface ChristoffersenTestResult {
+  independenceStatistic: number
+  independencePValue: number
+  independenceRejected: boolean
+  conditionalCoverageStatistic: number
+  conditionalCoveragePValue: number
+  conditionalCoverageRejected: boolean
+  n00: number
+  n01: number
+  n10: number
+  n11: number
+  conclusion: string
+}
+
+export interface BacktestResult {
+  method: 'Parametric' | 'Historical' | 'MonteCarlo'
+  confidenceLevel: number
+  windowSize: number
+  observations: number
+  violations: number
+  violationRate: number
+  expectedViolationRate: number
+  expectedViolations: number
+  kupiec: KupiecTestResult
+  christoffersen: ChristoffersenTestResult
+  zone: BaselZone
+  capitalMultiplierAddOn: number
+  averageVar: number
+  averageViolationSize: number
+  series: BacktestPoint[]
+  conclusion: string
+}
+
+export interface BacktestReport {
+  instrumentId: number
+  ticker: string
+  from: string
+  to: string
+  confidenceLevel: number
+  windowSize: number
+  totalReturns: number
+  results: BacktestResult[]
+  conclusion: string
+  durationMs: number
+}
+
+// ---------------------------------------------------------------------------
+// Стресс-тестирование
+// ---------------------------------------------------------------------------
+
+export type StressScenarioKind = 'Historical' | 'Hypothetical'
+
+export interface ScenarioPositionImpact {
+  instrumentId: number
+  ticker: string
+  weight: number
+  instrumentReturn: number
+  contribution: number
+  lossAmount: number
+}
+
+export interface ScenarioView {
+  name: string
+  kind: StressScenarioKind
+  from: string | null
+  to: string | null
+  tradingDays: number
+  portfolioReturn: number
+  lossAmount: number
+  valueAfter: number
+  lossToVarRatio: number
+  impacts: ScenarioPositionImpact[]
+  description: string
+}
+
+export interface StressTestReport {
+  portfolioId: number
+  portfolioName: string
+  portfolioValue: number
+  from: string
+  to: string
+  confidenceLevel: number
+  horizonDays: number
+  valueAtRisk: number
+  expectedShortfall: number
+  scenarios: ScenarioView[]
+  conclusion: string
+  durationMs: number
+}

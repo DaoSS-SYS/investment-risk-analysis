@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import type {
+  BacktestReport,
   Calculation,
   CorporateAction,
   CorrelationAnalysis,
@@ -12,6 +13,7 @@ import type {
   ReturnAnalysis,
   RiskCalculationParameters,
   SecuritySearchResult,
+  StressTestReport,
   SystemInfo,
   VarComparison,
 } from './types'
@@ -134,6 +136,24 @@ export const api = {
         })
       ).data,
 
+    backtest: async (
+      id: number,
+      options: { from?: string; to?: string; confidence?: number; window?: number },
+    ): Promise<BacktestReport> =>
+      (
+        await http.get(`/api/analysis/instruments/${id}/backtest`, {
+          params: {
+            from: formatDate(options.from),
+            to: formatDate(options.to),
+            confidence: options.confidence,
+            window: options.window,
+          },
+          // Бэктестирование выполняется по каждому дню периода проверки
+          // тремя методами и занимает больше времени, чем разовый расчёт.
+          timeout: 300_000,
+        })
+      ).data,
+
     correlation: async (ids: number[], from?: string, to?: string): Promise<CorrelationAnalysis> =>
       (
         await http.get('/api/analysis/correlation', {
@@ -190,6 +210,21 @@ export const api = {
             from: formatDate(options.from),
             to: formatDate(options.to),
             scenarios: options.scenarios,
+          },
+        })
+      ).data,
+
+    stressTest: async (
+      id: number,
+      options: { confidence?: number; horizon?: number; from?: string; to?: string },
+    ): Promise<StressTestReport> =>
+      (
+        await http.get(`/api/portfolios/${id}/stress-test`, {
+          params: {
+            confidence: options.confidence,
+            horizon: options.horizon,
+            from: formatDate(options.from),
+            to: formatDate(options.to),
           },
         })
       ).data,
