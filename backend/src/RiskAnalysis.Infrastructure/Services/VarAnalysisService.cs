@@ -80,7 +80,19 @@ public class VarAnalysisService : IVarAnalysisService
             Measure("Монте-Карло, историческая бутстрэп-выборка",
                 () => MonteCarloVarCalculator.Calculate(
                     returns, confidenceLevel, horizonDays, portfolioValue,
-                    new MonteCarloOptions(scenarioCount, SimulationDistribution.HistoricalBootstrap)))
+                    new MonteCarloOptions(scenarioCount, SimulationDistribution.HistoricalBootstrap))),
+
+            Measure("Условная волатильность EWMA",
+                () => ConditionalVarCalculator.Ewma(
+                    returns, confidenceLevel, horizonDays, portfolioValue)),
+
+            Measure("Условная волатильность GARCH(1,1)",
+                () => ConditionalVarCalculator.Garch(
+                    returns, confidenceLevel, horizonDays, portfolioValue)),
+
+            Measure("Фильтрованное историческое моделирование",
+                () => ConditionalVarCalculator.FilteredHistorical(
+                    returns, confidenceLevel, horizonDays, portfolioValue))
         };
 
         totalStopwatch.Stop();

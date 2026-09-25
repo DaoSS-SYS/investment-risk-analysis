@@ -169,6 +169,16 @@ public static class BacktestCalculator
                         new MonteCarloOptions(scenarioCount, SimulationDistribution.Normal))
                     .ValueAtRiskRelative,
 
+            VarMethod.EwmaParametric =>
+                ConditionalVarCalculator.Ewma(window, confidenceLevel).ValueAtRiskRelative,
+
+            VarMethod.GarchParametric =>
+                ConditionalVarCalculator.Garch(window, confidenceLevel).ValueAtRiskRelative,
+
+            VarMethod.FilteredHistorical =>
+                ConditionalVarCalculator.FilteredHistorical(window, confidenceLevel)
+                    .ValueAtRiskRelative,
+
             _ => throw new ArgumentOutOfRangeException(nameof(method))
         };
     }
@@ -427,6 +437,9 @@ public static class BacktestCalculator
             VarMethod.Parametric => "Параметрический метод",
             VarMethod.Historical => "Метод исторического моделирования",
             VarMethod.MonteCarlo => "Метод Монте-Карло",
+            VarMethod.EwmaParametric => "Параметрический метод с оценкой EWMA",
+            VarMethod.GarchParametric => "Параметрический метод с моделью GARCH(1,1)",
+            VarMethod.FilteredHistorical => "Фильтрованное историческое моделирование",
             _ => "Метод"
         };
 

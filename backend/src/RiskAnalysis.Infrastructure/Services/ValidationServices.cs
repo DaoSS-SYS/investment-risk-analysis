@@ -50,7 +50,18 @@ public class BacktestService : IBacktestService
 
         var returns = ReturnCalculator.Calculate(observations, ReturnType.Logarithmic);
 
-        var methods = new[] { VarMethod.Parametric, VarMethod.Historical, VarMethod.MonteCarlo };
+        // Проверяются как методы с безусловной оценкой волатильности,
+        // так и методы, опирающиеся на её условную оценку. Сопоставление
+        // двух групп составляет содержание проверки.
+        var methods = new[]
+        {
+            VarMethod.Parametric,
+            VarMethod.Historical,
+            VarMethod.MonteCarlo,
+            VarMethod.EwmaParametric,
+            VarMethod.GarchParametric,
+            VarMethod.FilteredHistorical
+        };
         var results = new List<BacktestResult>(methods.Length);
 
         foreach (var method in methods)
@@ -120,6 +131,9 @@ public class BacktestService : IBacktestService
         VarMethod.Parametric => "параметрический метод",
         VarMethod.Historical => "метод исторического моделирования",
         VarMethod.MonteCarlo => "метод Монте-Карло",
+        VarMethod.EwmaParametric => "параметрический метод с оценкой EWMA",
+        VarMethod.GarchParametric => "параметрический метод с моделью GARCH(1,1)",
+        VarMethod.FilteredHistorical => "фильтрованное историческое моделирование",
         _ => "неизвестный метод"
     };
 
