@@ -21,7 +21,13 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import { DeleteOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import {
+  DeleteOutlined,
+  FileExcelOutlined,
+  FilePdfOutlined,
+  PlusOutlined,
+  ThunderboltOutlined,
+} from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
@@ -304,9 +310,29 @@ export default function PortfolioDetailPage() {
           {data?.benchmarkTicker && <Tag>бенчмарк: {data.benchmarkTicker}</Tag>}
         </Space>
 
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setPositionOpen(true)}>
-          Добавить позицию
-        </Button>
+        <Space wrap>
+          <Button
+            icon={<FilePdfOutlined />}
+            disabled={!data || data.positions.length === 0}
+            href={api.portfolios.reportUrl(portfolioId, 'pdf', { confidence, horizon })}
+            target="_blank"
+          >
+            Отчёт PDF
+          </Button>
+
+          <Button
+            icon={<FileExcelOutlined />}
+            disabled={!data || data.positions.length === 0}
+            href={api.portfolios.reportUrl(portfolioId, 'xlsx', { confidence, horizon })}
+            target="_blank"
+          >
+            Отчёт Excel
+          </Button>
+
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setPositionOpen(true)}>
+            Добавить позицию
+          </Button>
+        </Space>
       </Space>
 
       {portfolio.isError && <Alert type="error" message={describeError(portfolio.error)} />}

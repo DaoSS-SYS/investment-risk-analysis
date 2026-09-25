@@ -215,6 +215,30 @@ export const api = {
         })
       ).data,
 
+    /**
+     * Возвращает адрес выгрузки отчёта. Загрузка выполняется переходом
+     * по адресу, а не запросом через клиент: сервер передаёт файл
+     * с заголовком Content-Disposition, и браузер сохраняет его
+     * с предложенным именем.
+     */
+    reportUrl: (
+      id: number,
+      format: 'pdf' | 'xlsx',
+      options: { confidence?: number; horizon?: number; includeStressTest?: boolean } = {},
+    ): string => {
+      const params = new URLSearchParams()
+
+      if (options.confidence !== undefined) params.set('confidence', String(options.confidence))
+      if (options.horizon !== undefined) params.set('horizon', String(options.horizon))
+      if (options.includeStressTest !== undefined) {
+        params.set('includeStressTest', String(options.includeStressTest))
+      }
+
+      const base = import.meta.env.VITE_API_BASE_URL ?? ''
+
+      return `${base}/api/portfolios/${id}/report/${format}?${params.toString()}`
+    },
+
     optimization: async (
       id: number,
       options: { maxWeight?: number; from?: string; to?: string },

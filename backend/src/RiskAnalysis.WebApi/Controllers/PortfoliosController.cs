@@ -17,19 +17,86 @@ public class PortfoliosController : ControllerBase
     private readonly ICalculationService _calculations;
     private readonly IStressTestService _stressTest;
     private readonly IPortfolioOptimizationService _optimization;
+    private readonly IReportService _reports;
 
     public PortfoliosController(
         IPortfolioService portfolios,
         IPortfolioRiskService risk,
         ICalculationService calculations,
         IStressTestService stressTest,
-        IPortfolioOptimizationService optimization)
+        IPortfolioOptimizationService optimization,
+        IReportService reports)
     {
         _portfolios = portfolios;
         _risk = risk;
         _calculations = calculations;
         _stressTest = stressTest;
         _optimization = optimization;
+        _reports = reports;
+    }
+
+    /// <summary>
+    /// Формирует отчёт по риску портфеля в формате переносимого документа.
+    /// Отчёт включает состав портфеля, оценки риска всеми реализованными
+    /// методами, разложение риска по позициям и результаты
+    /// стресс-тестирования.
+    /// </summary>
+    /// <param name="id">Идентификатор портфеля.</param>
+    /// <param name="confidence">Уровень доверия.</param>
+    /// <param name="horizon">Горизонт оценки в торговых днях.</param>
+    /// <param name="includeStressTest">Включать ли раздел стресс-тестирования.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    [HttpGet("{id:int}/report/pdf")]
+    [Produces("application/pdf")]
+    public async Task<IActionResult> DownloadPdfReport(
+        int id,
+        [FromQuery] double confidence = 0.99,
+        [FromQuery] int horizon = 1,
+        [FromQuery] bool includeStressTest = true,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var report = await _reports.BuildPortfolioPdfAsync(
+                id, confidence, horizon, includeStressTest, cancellationToken);
+
+            return File(report.Content, report.ContentType, report.FileName);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Формирует отчёт по риску портфеля в формате электронной таблицы.
+    /// Числовые величины записываются числами и снабжаются форматами
+    /// отображения, что позволяет дальнейшую обработку данных пользователем.
+    /// </summary>
+    /// <param name="id">Идентификатор портфеля.</param>
+    /// <param name="confidence">Уровень доверия.</param>
+    /// <param name="horizon">Горизонт оценки в торговых днях.</param>
+    /// <param name="includeStressTest">Включать ли лист стресс-тестирования.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    [HttpGet("{id:int}/report/xlsx")]
+    public async Task<IActionResult> DownloadWorkbookReport(
+        int id,
+        [FromQuery] double confidence = 0.99,
+        [FromQuery] int horizon = 1,
+        [FromQuery] bool includeStressTest = true,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var report = await _reports.BuildPortfolioWorkbookAsync(
+                id, confidence, horizon, includeStressTest, cancellationToken);
+
+            return File(report.Content, report.ContentType, report.FileName);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     /// <summary>
