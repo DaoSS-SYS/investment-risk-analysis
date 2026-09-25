@@ -16,15 +16,18 @@ public class AnalysisController : ControllerBase
     private readonly IReturnAnalysisService _analysis;
     private readonly IVarAnalysisService _var;
     private readonly IPerformanceAnalysisService _performance;
+    private readonly IBacktestService _backtest;
 
     public AnalysisController(
         IReturnAnalysisService analysis,
         IVarAnalysisService varAnalysis,
-        IPerformanceAnalysisService performance)
+        IPerformanceAnalysisService performance,
+        IBacktestService backtest)
     {
         _analysis = analysis;
         _var = varAnalysis;
         _performance = performance;
+        _backtest = backtest;
     }
 
     /// <summary>
@@ -183,6 +186,47 @@ public class AnalysisController : ControllerBase
         {
             var result = await _performance.AnalyzeCorrelationAsync(
                 parsed, dateFrom, dateTo, cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Выполняет бэктестирование моделей оценки стоимостной меры риска:
+    /// проверяет, согласуются ли оценки с фактически наблюдавшимися потерями.
+    ///
+    /// Для каждого дня периода проверки оценка риска рассчитывается только
+    /// по предшествующим наблюдениям, после чего сопоставляется с фактической
+    /// доходностью. Применяются критерий Купца, критерий Кристоферсена
+    /// и подход Базельского комитета.
+    /// </summary>
+    /// <param name="id">Идентификатор инструмента.</param>
+    /// <param name="from">Начало периода выборки. По умолчанию — десять лет назад.</param>
+    /// <param name="to">Конец периода выборки. По умолчанию — текущая дата.</param>
+    /// <param name="confidence">Уровень доверия. По умолчанию 0,99.</param>
+    /// <param name="window">Глубина скользящего окна оценивания. По умолчанию 250 дней.</param>
+    /// <param name="scenarios">Число сценариев метода Монте-Карло.</param>
+    [HttpGet("instruments/{id:int}/backtest")]
+    public async Task<ActionResult<BacktestReport>> Backtest(
+        int id,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] double confidence = 0.99,
+        [FromQuery] int window = 250,
+        [FromQuery] int scenarios = 10_000,
+        CancellationToken cancellationToken = default)
+    {
+        var dateTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var dateFrom = from ?? dateTo.AddYears(-10);
+
+        try
+        {
+            var result = await _backtest.RunAsync(
+                id, dateFrom, dateTo, confidence, window, scenarios, cancellationToken);
 
             return Ok(result);
         }

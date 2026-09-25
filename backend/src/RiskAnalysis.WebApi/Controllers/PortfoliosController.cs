@@ -15,15 +15,54 @@ public class PortfoliosController : ControllerBase
     private readonly IPortfolioService _portfolios;
     private readonly IPortfolioRiskService _risk;
     private readonly ICalculationService _calculations;
+    private readonly IStressTestService _stressTest;
 
     public PortfoliosController(
         IPortfolioService portfolios,
         IPortfolioRiskService risk,
-        ICalculationService calculations)
+        ICalculationService calculations,
+        IStressTestService stressTest)
     {
         _portfolios = portfolios;
         _risk = risk;
         _calculations = calculations;
+        _stressTest = stressTest;
+    }
+
+    /// <summary>
+    /// Выполняет стресс-тестирование портфеля: применяет исторические
+    /// и гипотетические сценарии и сопоставляет полученные потери
+    /// со стоимостной мерой риска.
+    /// </summary>
+    /// <param name="id">Идентификатор портфеля.</param>
+    /// <param name="from">Начало периода выборки.</param>
+    /// <param name="to">Конец периода выборки.</param>
+    /// <param name="confidence">Уровень доверия для расчёта меры риска.</param>
+    /// <param name="horizon">Горизонт оценки меры риска в торговых днях.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    [HttpGet("{id:int}/stress-test")]
+    public async Task<ActionResult<StressTestReport>> StressTest(
+        int id,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] double confidence = 0.99,
+        [FromQuery] int horizon = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var dateTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var dateFrom = from ?? dateTo.AddYears(-10);
+
+        try
+        {
+            var result = await _stressTest.RunAsync(
+                id, dateFrom, dateTo, confidence, horizon, cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     /// <summary>Возвращает перечень портфелей с текущей оценкой.</summary>

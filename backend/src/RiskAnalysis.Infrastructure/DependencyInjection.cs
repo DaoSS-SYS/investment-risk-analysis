@@ -33,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<IPortfolioService, PortfolioService>();
         services.AddScoped<IPortfolioRiskService, PortfolioRiskService>();
         services.AddScoped<ICalculationService, CalculationService>();
+        services.AddScoped<IBacktestService, BacktestService>();
+        services.AddScoped<IStressTestService, StressTestService>();
 
         // Очередь асинхронных расчётов существует в единственном экземпляре
         // на всё приложение; обработчик очереди — фоновая служба.
