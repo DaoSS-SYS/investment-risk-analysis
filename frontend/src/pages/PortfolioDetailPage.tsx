@@ -29,6 +29,7 @@ import dayjs from 'dayjs'
 import type { ColumnsType } from 'antd/es/table'
 
 import { api, describeError } from '../api/client'
+import OptimizationPanel from '../components/OptimizationPanel'
 import StressTestPanel from '../components/StressTestPanel'
 import type { Position, PositionRiskContribution, VarResult } from '../api/types'
 import {
@@ -547,6 +548,11 @@ export default function PortfolioDetailPage() {
       <StressTestPanel
         portfolioId={portfolioId}
         disabled={!data || data.positions.length === 0}
+      />
+
+      <OptimizationPanel
+        portfolioId={portfolioId}
+        disabled={!data || data.positions.length < 2}
       />
 
       <Modal

@@ -16,17 +16,58 @@ public class PortfoliosController : ControllerBase
     private readonly IPortfolioRiskService _risk;
     private readonly ICalculationService _calculations;
     private readonly IStressTestService _stressTest;
+    private readonly IPortfolioOptimizationService _optimization;
 
     public PortfoliosController(
         IPortfolioService portfolios,
         IPortfolioRiskService risk,
         ICalculationService calculations,
-        IStressTestService stressTest)
+        IStressTestService stressTest,
+        IPortfolioOptimizationService optimization)
     {
         _portfolios = portfolios;
         _risk = risk;
         _calculations = calculations;
         _stressTest = stressTest;
+        _optimization = optimization;
+    }
+
+    /// <summary>
+    /// Выполняет оптимизацию структуры портфеля по модели Марковица:
+    /// строит эффективную границу, определяет портфель наименьшей дисперсии
+    /// и касательный портфель, сопоставляет их с текущей структурой.
+    /// </summary>
+    /// <param name="id">Идентификатор портфеля.</param>
+    /// <param name="from">Начало периода выборки.</param>
+    /// <param name="to">Конец периода выборки.</param>
+    /// <param name="maxWeight">
+    /// Предельная доля одного инструмента. Значение 1 означает отсутствие
+    /// ограничения сверху.
+    /// </param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    [HttpGet("{id:int}/optimization")]
+    public async Task<ActionResult<OptimizationReport>> Optimize(
+        int id,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] double maxWeight = 1.0,
+        CancellationToken cancellationToken = default)
+    {
+        var dateTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var dateFrom = from ?? dateTo.AddYears(-10);
+
+        try
+        {
+            var result = await _optimization.OptimizeAsync(
+                id, dateFrom, dateTo, maxWeight, cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException
+                                       or ArgumentOutOfRangeException)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     /// <summary>

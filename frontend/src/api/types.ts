@@ -473,3 +473,47 @@ export interface StressTestReport {
   conclusion: string
   durationMs: number
 }
+
+// ---------------------------------------------------------------------------
+// Оптимизация структуры портфеля
+// ---------------------------------------------------------------------------
+
+export interface InstrumentWeight {
+  instrumentId: number
+  ticker: string
+  weight: number
+  currentWeight: number
+  change: number
+}
+
+export interface NamedPortfolio {
+  name: string
+  expectedReturn: number
+  volatility: number
+  sharpeRatio: number
+  weights: InstrumentWeight[]
+}
+
+export interface FrontierPoint {
+  volatility: number
+  expectedReturn: number
+  sharpeRatio: number
+}
+
+export interface OptimizationReport {
+  portfolioId: number
+  portfolioName: string
+  from: string
+  to: string
+  observationCount: number
+  portfolioValue: number
+  riskFreeRateAnnual: number
+  maximumWeight: number
+  current: NamedPortfolio | null
+  minimumVariance: NamedPortfolio
+  maximumSharpe: NamedPortfolio
+  efficientFrontier: FrontierPoint[]
+  randomPortfolios: FrontierPoint[]
+  conclusion: string
+  durationMs: number
+}

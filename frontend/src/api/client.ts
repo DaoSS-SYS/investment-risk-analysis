@@ -12,6 +12,7 @@ import type {
   PriceSeries,
   ReturnAnalysis,
   RiskCalculationParameters,
+  OptimizationReport,
   SecuritySearchResult,
   StressTestReport,
   SystemInfo,
@@ -210,6 +211,20 @@ export const api = {
             from: formatDate(options.from),
             to: formatDate(options.to),
             scenarios: options.scenarios,
+          },
+        })
+      ).data,
+
+    optimization: async (
+      id: number,
+      options: { maxWeight?: number; from?: string; to?: string },
+    ): Promise<OptimizationReport> =>
+      (
+        await http.get(`/api/portfolios/${id}/optimization`, {
+          params: {
+            maxWeight: options.maxWeight,
+            from: formatDate(options.from),
+            to: formatDate(options.to),
           },
         })
       ).data,
