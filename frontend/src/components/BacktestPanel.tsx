@@ -27,6 +27,9 @@ function methodName(method: string): string {
     Parametric: 'Параметрический',
     Historical: 'Историческое моделирование',
     MonteCarlo: 'Монте-Карло',
+    EwmaParametric: 'Условная волатильность EWMA',
+    GarchParametric: 'Модель GARCH(1,1)',
+    FilteredHistorical: 'Фильтрованное историческое',
   }
 
   return names[method] ?? method

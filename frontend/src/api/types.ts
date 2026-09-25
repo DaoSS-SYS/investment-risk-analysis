@@ -125,7 +125,7 @@ export interface ReturnAnalysis {
 }
 
 export interface VarResult {
-  method: 'Parametric' | 'Historical' | 'MonteCarlo'
+  method: VarMethodName
   confidenceLevel: number
   horizonDays: number
   valueAtRiskRelative: number
@@ -390,8 +390,16 @@ export interface ChristoffersenTestResult {
   conclusion: string
 }
 
+export type VarMethodName =
+  | 'Parametric'
+  | 'Historical'
+  | 'MonteCarlo'
+  | 'EwmaParametric'
+  | 'GarchParametric'
+  | 'FilteredHistorical'
+
 export interface BacktestResult {
-  method: 'Parametric' | 'Historical' | 'MonteCarlo'
+  method: VarMethodName
   confidenceLevel: number
   windowSize: number
   observations: number
