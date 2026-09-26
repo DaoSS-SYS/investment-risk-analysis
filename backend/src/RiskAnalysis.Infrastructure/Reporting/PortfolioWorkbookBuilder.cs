@@ -169,7 +169,7 @@ public static class PortfolioWorkbookBuilder
 
         foreach (var estimate in risk.Estimates)
         {
-            sheet.Cell(row, 1).Value = estimate.Description.Split('.')[0].Split(',')[0];
+            sheet.Cell(row, 1).Value = estimate.Title;
             sheet.Cell(row, 2).Value = estimate.ValueAtRiskAbsolute;
             sheet.Cell(row, 3).Value = estimate.ValueAtRiskRelative;
             sheet.Cell(row, 4).Value = estimate.ExpectedShortfallAbsolute;

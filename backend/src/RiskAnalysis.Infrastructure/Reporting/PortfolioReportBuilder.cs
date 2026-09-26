@@ -195,7 +195,7 @@ public static class PortfolioReportBuilder
 
                 foreach (var estimate in risk.Estimates)
                 {
-                    table.Cell().Element(Cell).Text(MethodName(estimate.Description));
+                    table.Cell().Element(Cell).Text(estimate.Title);
                     table.Cell().Element(CellRight).Text(Money((decimal)estimate.ValueAtRiskAbsolute));
                     table.Cell().Element(CellRight).Text(Percent(estimate.ValueAtRiskRelative, 2));
                     table.Cell().Element(CellRight)
@@ -399,8 +399,6 @@ public static class PortfolioReportBuilder
         table.Cell().PaddingVertical(2).Text(label).FontSize(8).FontColor(MutedColor);
         table.Cell().PaddingVertical(2).Text(value).FontSize(9).SemiBold();
     }
-
-    private static string MethodName(string description) => description.Split('.')[0].Split(',')[0];
 
     private static string Money(decimal value) =>
         $"{value.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("ru-RU"))} ₽";

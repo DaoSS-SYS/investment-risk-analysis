@@ -161,32 +161,3 @@ export function calculationStatusColor(status: string): string {
   return colors[status] ?? 'default'
 }
 
-/**
- * Формирует краткое наименование метода оценки риска для таблицы.
- *
- * Сервер возвращает развёрнутое описание расчёта. Разновидности метода
- * Монте-Карло различаются законом распределения, поэтому для них
- * наименование дополняется его названием.
- */
-export function describeVarMethod(description: string): string {
-  const head = description.split(',')[0].trim()
-
-  const match = description.match(/закон распределения — ([^.]+)\./)
-
-  if (!match) {
-    return head
-  }
-
-  const distribution = match[1].trim()
-
-  const shortNames: Record<string, string> = {
-    'нормальное распределение': 'нормальное распределение',
-    'историческая бутстрэп-выборка': 'бутстрэп-выборка',
-  }
-
-  const shortName =
-    shortNames[distribution] ??
-    (distribution.startsWith('распределение Стьюдента') ? 'распределение Стьюдента' : distribution)
-
-  return `${head}: ${shortName}`
-}

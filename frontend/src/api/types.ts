@@ -137,6 +137,7 @@ export interface VarResult {
   mean: number
   standardDeviation: number
   description: string
+  title: string
 }
 
 export interface VarEstimate {

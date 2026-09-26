@@ -40,7 +40,6 @@ import StressTestPanel from '../components/StressTestPanel'
 import { useAuth } from '../auth/AuthContext'
 import type { Position, PositionRiskContribution, VarResult } from '../api/types'
 import {
-  describeVarMethod,
   formatCount,
   formatDate,
   formatDuration,
@@ -188,8 +187,7 @@ export default function PortfolioDetailPage() {
   const varColumns: ColumnsType<VarResult> = [
     {
       title: 'Метод',
-      dataIndex: 'description',
-      render: (description: string) => describeVarMethod(description),
+      dataIndex: 'title',
     },
     {
       title: 'VaR',

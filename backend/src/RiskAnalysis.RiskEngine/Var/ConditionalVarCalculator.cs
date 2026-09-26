@@ -64,7 +64,8 @@ public static class ConditionalVarCalculator
             $"Параметрический метод с экспоненциально взвешенной оценкой волатильности, " +
             $"λ = {lambda:F2}, уровень доверия {confidenceLevel:P0}, горизонт {horizonDays} " +
             $"торг. дн. Прогноз волатильности {volatility.Forecast:P2} против безусловной " +
-            $"оценки {statistics.StandardDeviation:P2}.");
+            $"оценки {statistics.StandardDeviation:P2}.",
+            $"Параметрический метод, оценка волатильности EWMA (λ = {lambda:F2})");
     }
 
     /// <summary>
@@ -90,7 +91,8 @@ public static class ConditionalVarCalculator
             $"α = {volatility.Parameters["alpha"]:F4}, β = {volatility.Parameters["beta"]:F4}, " +
             $"уровень доверия {confidenceLevel:P0}, горизонт {horizonDays} торг. дн. " +
             $"Прогноз волатильности {volatility.Forecast:P2} против безусловной оценки " +
-            $"{statistics.StandardDeviation:P2}.");
+            $"{statistics.StandardDeviation:P2}.",
+            "Параметрический метод, оценка волатильности GARCH(1,1)");
     }
 
     /// <summary>
@@ -190,7 +192,8 @@ public static class ConditionalVarCalculator
                 $"Квантиль стандартизованных доходностей {quantile:F4} против квантиля " +
                 $"нормального распределения {normalQuantile:F4}; прогноз волатильности " +
                 $"{volatility.Forecast:P2} против безусловной оценки " +
-                $"{statistics.StandardDeviation:P2}.");
+                $"{statistics.StandardDeviation:P2}.",
+            Title: "Фильтрованное историческое моделирование");
     }
 
     /// <summary>
@@ -205,7 +208,8 @@ public static class ConditionalVarCalculator
         double confidenceLevel,
         int horizonDays,
         double portfolioValue,
-        string description)
+        string description,
+        string title)
     {
         VarConventions.ValidateConfidenceLevel(confidenceLevel);
         VarConventions.ValidateHorizon(horizonDays);
@@ -234,6 +238,7 @@ public static class ConditionalVarCalculator
             ObservationCount: observationCount,
             Mean: horizonMean,
             StandardDeviation: horizonDeviation,
-            Description: description);
+            Description: description,
+            Title: title);
     }
 }

@@ -406,6 +406,7 @@ public static class MonteCarloVarCalculator
                 $"закон распределения — {distributionName}. Инструментов в портфеле: " +
                 $"{weights.Count}, наблюдений в выборке: {returns[0].Length}. " +
                 $"Начальное значение генератора: " +
-                $"{(options.RandomSeed?.ToString() ?? "не задано")}.");
+                $"{(options.RandomSeed?.ToString() ?? "не задано")}.",
+            Title: $"Метод Монте-Карло, {distributionName}");
     }
 }

@@ -96,6 +96,16 @@ public enum SimulationDistribution
 /// <param name="Mean">Средняя доходность на горизонте оценки.</param>
 /// <param name="StandardDeviation">Среднеквадратическое отклонение на горизонте оценки.</param>
 /// <param name="Description">Пояснение к полученной оценке.</param>
+/// <param name="Title">
+/// Краткое наименование метода для заголовка строки в таблице и отчёте.
+///
+/// Хранится отдельно от пояснения намеренно. Прежде наименование получали
+/// усечением пояснения по первой запятой, и два различных расчёта методом
+/// Монте-Карло — по нормальному распределению и по исторической
+/// бутстрэп-выборке — давали в отчёте одинаковую строку «Метод
+/// Монте-Карло». Различие между ними составляет существо сопоставления,
+/// и в отчёте оно должно быть видно.
+/// </param>
 public sealed record VarResult(
     VarMethod Method,
     double ConfidenceLevel,
@@ -108,7 +118,8 @@ public sealed record VarResult(
     int ObservationCount,
     double Mean,
     double StandardDeviation,
-    string Description);
+    string Description,
+    string Title);
 
 /// <summary>
 /// Общие правила расчёта стоимостной меры риска.
