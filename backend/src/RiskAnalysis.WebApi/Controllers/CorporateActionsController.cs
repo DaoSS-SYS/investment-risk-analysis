@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RiskAnalysis.Application.Abstractions;
 using RiskAnalysis.Application.Models;
 using RiskAnalysis.Domain.Enums;
+using RiskAnalysis.Infrastructure.Identity;
 using RiskAnalysis.Infrastructure.Persistence;
 
 namespace RiskAnalysis.WebApi.Controllers;
@@ -30,6 +32,7 @@ public class CorporateActionsController : ControllerBase
     /// Проверяет ценовой ряд инструмента и сохраняет обнаруженные аномалии.
     /// </summary>
     /// <param name="instrumentId">Идентификатор инструмента.</param>
+    [Authorize(Policy = AuthorizationPolicies.ManageReferenceData)]
     [HttpPost("detect/{instrumentId:int}")]
     public async Task<ActionResult<AnomalyDetectionResult>> Detect(
         int instrumentId,
@@ -40,6 +43,7 @@ public class CorporateActionsController : ControllerBase
     }
 
     /// <summary>Проверяет ценовые ряды всех инструментов справочника.</summary>
+    [Authorize(Policy = AuthorizationPolicies.ManageReferenceData)]
     [HttpPost("detect-all")]
     public async Task<ActionResult<IReadOnlyList<AnomalyDetectionResult>>> DetectAll(
         CancellationToken cancellationToken)
@@ -94,6 +98,7 @@ public class CorporateActionsController : ControllerBase
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
     /// <param name="request">Новая классификация.</param>
+    [Authorize(Policy = AuthorizationPolicies.ManageReferenceData)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,

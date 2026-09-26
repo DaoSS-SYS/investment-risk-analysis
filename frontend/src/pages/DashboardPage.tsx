@@ -4,6 +4,7 @@ import { CloudDownloadOutlined, ReloadOutlined, SafetyOutlined } from '@ant-desi
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api, describeError } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import { formatCount, formatDuration } from '../lib/format'
 
 /**
@@ -12,6 +13,7 @@ import { formatCount, formatDuration } from '../lib/format'
 export default function DashboardPage() {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const { canManageReferenceData } = useAuth()
   const [lastOperation, setLastOperation] = useState<string | null>(null)
 
   const info = useQuery({
@@ -113,6 +115,7 @@ export default function DashboardPage() {
         </Col>
       </Row>
 
+      {canManageReferenceData && (
       <Card title="Загрузка и подготовка данных" size="small">
         <Space wrap>
           <Button
@@ -146,6 +149,7 @@ export default function DashboardPage() {
           </Typography.Paragraph>
         )}
       </Card>
+      )}
 
       <Card title="Сведения о системе" size="small">
         <Descriptions column={{ xs: 1, sm: 1, md: 2 }} size="small" bordered>

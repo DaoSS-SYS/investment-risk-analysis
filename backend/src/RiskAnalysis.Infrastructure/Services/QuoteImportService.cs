@@ -28,15 +28,18 @@ public class QuoteImportService : IQuoteImportService
 
     private readonly RiskAnalysisDbContext _db;
     private readonly IMarketDataClient _marketData;
+    private readonly IAuditService _audit;
     private readonly ILogger<QuoteImportService> _logger;
 
     public QuoteImportService(
         RiskAnalysisDbContext db,
         IMarketDataClient marketData,
+        IAuditService audit,
         ILogger<QuoteImportService> logger)
     {
         _db = db;
         _marketData = marketData;
+        _audit = audit;
         _logger = logger;
     }
 
@@ -145,6 +148,12 @@ public class QuoteImportService : IQuoteImportService
             _logger.LogInformation(
                 "Загрузка {Ticker} за {From}–{To}: получено {Received}, добавлено {Inserted}, обновлено {Updated}, {Duration} мс",
                 instrument.Ticker, from, to, received.Count, inserted, updated, stopwatch.ElapsedMilliseconds);
+
+            await _audit.RecordAsync(
+                AuditAction.Import, "Quote", instrument.Id.ToString(),
+                $"Загружены котировки {instrument.Ticker} за период " +
+                $"{from:dd.MM.yyyy} — {to:dd.MM.yyyy}: добавлено {inserted}, обновлено {updated}",
+                cancellationToken);
 
             return new ImportResult(
                 instrument.Id, instrument.Ticker, from, to,

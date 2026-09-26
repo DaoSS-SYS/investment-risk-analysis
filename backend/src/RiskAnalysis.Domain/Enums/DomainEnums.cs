@@ -110,3 +110,28 @@ public enum DetectionSource
     /// <summary>Внесено или переопределено пользователем.</summary>
     Manual = 2
 }
+
+/// <summary>Вид действия, фиксируемого в журнале.</summary>
+public enum AuditAction
+{
+    /// <summary>Вход в систему.</summary>
+    Login = 1,
+
+    /// <summary>Создание объекта.</summary>
+    Create = 2,
+
+    /// <summary>Изменение объекта.</summary>
+    Update = 3,
+
+    /// <summary>Удаление объекта.</summary>
+    Delete = 4,
+
+    /// <summary>Выполнение расчёта.</summary>
+    Calculate = 5,
+
+    /// <summary>Загрузка данных из внешнего источника.</summary>
+    Import = 6,
+
+    /// <summary>Формирование отчёта.</summary>
+    Report = 7
+}

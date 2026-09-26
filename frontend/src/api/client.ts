@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import type {
+  AuditRecordView,
   BacktestReport,
   Calculation,
   CorporateAction,
@@ -12,10 +13,13 @@ import type {
   PriceSeries,
   ReturnAnalysis,
   RiskCalculationParameters,
+  LoginResult,
   OptimizationReport,
+  RoleInfo,
   SecuritySearchResult,
   StressTestReport,
   SystemInfo,
+  UserView,
   VarComparison,
 } from './types'
 
@@ -34,6 +38,51 @@ const http = axios.create({
 })
 
 /**
+ * Источник маркера доступа. Задаётся состоянием проверки подлинности;
+ * клиент обращается к нему при каждом запросе, а не хранит значение,
+ * чтобы не зависеть от состояния компонентов.
+ */
+let authTokenProvider: () => string | null = () => null
+
+/** Обработчик отказа в доступе. Вызывается при истечении срока маркера. */
+let unauthorizedHandler: () => void = () => {}
+
+/** Задаёт источник маркера доступа. */
+export function setAuthTokenProvider(provider: () => string | null): void {
+  authTokenProvider = provider
+}
+
+/** Задаёт обработчик отказа в доступе. */
+export function setUnauthorizedHandler(handler: () => void): void {
+  unauthorizedHandler = handler
+}
+
+// Маркер доступа добавляется в заголовок каждого запроса.
+http.interceptors.request.use((config) => {
+  const token = authTokenProvider()
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+
+  return config
+})
+
+// Отказ по причине недействительного маркера означает истечение срока
+// его действия: сеанс завершается, и пользователю предлагается войти вновь.
+// Отказ по причине недостатка полномочий сеанс не прерывает.
+http.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      unauthorizedHandler()
+    }
+
+    return Promise.reject(error)
+  },
+)
+
+/**
  * Приводит ошибку обращения к интерфейсу к сообщению, пригодному
  * для показа пользователю. Сервер возвращает пояснение в поле error.
  */
@@ -47,6 +96,14 @@ export function describeError(error: unknown): string {
 
     if (payload?.title) {
       return payload.title
+    }
+
+    if (error.response?.status === 403) {
+      return 'Недостаточно полномочий для выполнения операции.'
+    }
+
+    if (error.response?.status === 401) {
+      return 'Срок действия сеанса истёк. Выполните вход в систему повторно.'
     }
 
     if (error.code === 'ECONNABORTED') {
@@ -69,6 +126,33 @@ function formatDate(value?: string | null): string | undefined {
 }
 
 export const api = {
+  auth: {
+    login: async (userName: string, password: string): Promise<LoginResult> =>
+      (await http.post('/api/auth/login', { userName, password })).data,
+
+    me: async (): Promise<UserView> => (await http.get('/api/auth/me')).data,
+
+    users: async (): Promise<UserView[]> => (await http.get('/api/auth/users')).data,
+
+    roles: async (): Promise<RoleInfo[]> => (await http.get('/api/auth/roles')).data,
+
+    createUser: async (payload: {
+      userName: string
+      password: string
+      fullName: string
+      position?: string
+      email?: string
+      role: string
+    }): Promise<UserView> => (await http.post('/api/auth/users', payload)).data,
+
+    setUserActive: async (id: string, isActive: boolean): Promise<void> => {
+      await http.put(`/api/auth/users/${id}/active`, null, { params: { isActive } })
+    },
+
+    audit: async (limit = 100): Promise<AuditRecordView[]> =>
+      (await http.get('/api/audit', { params: { limit } })).data,
+  },
+
   system: {
     info: async (): Promise<SystemInfo> => (await http.get('/api/system/info')).data,
   },

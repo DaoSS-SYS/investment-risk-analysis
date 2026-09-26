@@ -517,3 +517,41 @@ export interface OptimizationReport {
   conclusion: string
   durationMs: number
 }
+
+// ---------------------------------------------------------------------------
+// Проверка подлинности и разграничение доступа
+// ---------------------------------------------------------------------------
+
+export interface UserView {
+  id: string
+  userName: string
+  fullName: string
+  position: string | null
+  email: string | null
+  roles: string[]
+  isActive: boolean
+  createdAt: string
+  lastLoginAt: string | null
+}
+
+export interface LoginResult {
+  token: string
+  expiresAt: string
+  user: UserView
+}
+
+export interface RoleInfo {
+  name: string
+  description: string
+}
+
+export interface AuditRecordView {
+  id: number
+  userName: string
+  action: string
+  entityType: string
+  entityId: string | null
+  description: string
+  ipAddress: string | null
+  timestamp: string
+}

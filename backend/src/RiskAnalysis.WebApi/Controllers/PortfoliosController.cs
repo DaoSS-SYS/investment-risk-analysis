@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RiskAnalysis.Application.Abstractions;
 using RiskAnalysis.Application.Models;
+using RiskAnalysis.Infrastructure.Identity;
 
 namespace RiskAnalysis.WebApi.Controllers;
 
@@ -193,6 +195,7 @@ public class PortfoliosController : ControllerBase
 
     /// <summary>Создаёт портфель.</summary>
     /// <param name="request">Реквизиты портфеля.</param>
+    [Authorize(Policy = AuthorizationPolicies.ManagePortfolios)]
     [HttpPost]
     public async Task<ActionResult<PortfolioView>> Create(
         [FromBody] PortfolioRequest request, CancellationToken cancellationToken)
@@ -212,6 +215,7 @@ public class PortfoliosController : ControllerBase
     /// <summary>Изменяет реквизиты портфеля.</summary>
     /// <param name="id">Идентификатор портфеля.</param>
     /// <param name="request">Новые реквизиты.</param>
+    [Authorize(Policy = AuthorizationPolicies.ManagePortfolios)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<PortfolioView>> Update(
         int id, [FromBody] PortfolioRequest request, CancellationToken cancellationToken)
@@ -230,6 +234,7 @@ public class PortfoliosController : ControllerBase
 
     /// <summary>Удаляет портфель вместе с позициями и историей расчётов.</summary>
     /// <param name="id">Идентификатор портфеля.</param>
+    [Authorize(Policy = AuthorizationPolicies.ManagePortfolios)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
@@ -239,6 +244,7 @@ public class PortfoliosController : ControllerBase
     /// <summary>Добавляет позицию в портфель.</summary>
     /// <param name="id">Идентификатор портфеля.</param>
     /// <param name="request">Реквизиты позиции.</param>
+    [Authorize(Policy = AuthorizationPolicies.ManagePortfolios)]
     [HttpPost("{id:int}/positions")]
     public async Task<ActionResult<PortfolioView>> AddPosition(
         int id, [FromBody] PositionRequest request, CancellationToken cancellationToken)
@@ -258,6 +264,7 @@ public class PortfoliosController : ControllerBase
     /// <summary>Удаляет позицию портфеля.</summary>
     /// <param name="id">Идентификатор портфеля.</param>
     /// <param name="positionId">Идентификатор позиции.</param>
+    [Authorize(Policy = AuthorizationPolicies.ManagePortfolios)]
     [HttpDelete("{id:int}/positions/{positionId:int}")]
     public async Task<ActionResult<PortfolioView>> RemovePosition(
         int id, int positionId, CancellationToken cancellationToken)

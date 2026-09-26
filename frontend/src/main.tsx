@@ -7,6 +7,7 @@ import ruRU from 'antd/locale/ru_RU'
 import 'dayjs/locale/ru'
 
 import App from './App'
+import { AuthProvider } from './auth/AuthContext'
 import './index.css'
 
 /**
@@ -44,7 +45,9 @@ createRoot(document.getElementById('root')!).render(
       <AntApp>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
-            <App />
+            <AuthProvider>
+              <App />
+            </AuthProvider>
           </BrowserRouter>
         </QueryClientProvider>
       </AntApp>

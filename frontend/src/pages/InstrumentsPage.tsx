@@ -24,6 +24,7 @@ import { Link } from 'react-router-dom'
 import type { ColumnsType } from 'antd/es/table'
 
 import { api, describeError } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import type { Instrument, SecuritySearchResult } from '../api/types'
 import { describeSecurityType, formatCount, formatDate, formatDuration } from '../lib/format'
 
@@ -34,6 +35,11 @@ import { describeSecurityType, formatCount, formatDate, formatDuration } from '.
 export default function InstrumentsPage() {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+
+  // Ведение справочника отнесено к обязанностям сопровождения системы.
+  // Сокрытие действий — удобство представления; разграничение доступа
+  // обеспечивается на стороне сервера.
+  const { canManageReferenceData } = useAuth()
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -137,6 +143,7 @@ export default function InstrumentsPage() {
       title: 'Действия',
       width: 150,
       align: 'right',
+      hidden: !canManageReferenceData,
       render: (_, record) => (
         <Space size={4}>
           <Tooltip title="Загрузить историю котировок за десять лет">
@@ -207,9 +214,11 @@ export default function InstrumentsPage() {
           Справочник инструментов
         </Typography.Title>
 
-        <Button type="primary" icon={<SearchOutlined />} onClick={() => setSearchOpen(true)}>
-          Найти на Московской Бирже
-        </Button>
+        {canManageReferenceData && (
+          <Button type="primary" icon={<SearchOutlined />} onClick={() => setSearchOpen(true)}>
+            Найти на Московской Бирже
+          </Button>
+        )}
       </Space>
 
       <Card size="small">

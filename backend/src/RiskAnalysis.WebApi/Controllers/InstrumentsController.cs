@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RiskAnalysis.Application.Abstractions;
 using RiskAnalysis.Application.Models;
 using RiskAnalysis.Domain.Entities;
+using RiskAnalysis.Infrastructure.Identity;
 using RiskAnalysis.Infrastructure.Persistence;
 using RiskAnalysis.WebApi.Contracts;
 
@@ -88,6 +90,7 @@ public class InstrumentsController : ControllerBase
     /// Добавляет инструмент в справочник системы. Реквизиты инструмента
     /// получаются из справочника Московской Биржи по биржевому коду.
     /// </summary>
+    [Authorize(Policy = AuthorizationPolicies.ManageReferenceData)]
     [HttpPost]
     public async Task<ActionResult<InstrumentDto>> Add(
         [FromBody] AddInstrumentRequest request,
@@ -161,6 +164,7 @@ public class InstrumentsController : ControllerBase
     }
 
     /// <summary>Удаляет инструмент вместе с его историей котировок.</summary>
+    [Authorize(Policy = AuthorizationPolicies.ManageReferenceData)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
@@ -185,6 +189,7 @@ public class InstrumentsController : ControllerBase
     /// <param name="id">Идентификатор инструмента.</param>
     /// <param name="from">Начало периода. По умолчанию — десять лет назад.</param>
     /// <param name="to">Конец периода. По умолчанию — текущая дата.</param>
+    [Authorize(Policy = AuthorizationPolicies.ManageReferenceData)]
     [HttpPost("{id:int}/quotes/import")]
     public async Task<ActionResult<ImportResult>> ImportQuotes(
         int id,

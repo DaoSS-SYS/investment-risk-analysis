@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using RiskAnalysis.Application.Abstractions;
 using RiskAnalysis.Application.Models;
 using RiskAnalysis.Domain.Entities;
+using RiskAnalysis.Domain.Enums;
+using RiskAnalysis.Infrastructure.Identity;
 using RiskAnalysis.Infrastructure.Persistence;
 
 namespace RiskAnalysis.Infrastructure.Services;
@@ -16,8 +18,16 @@ namespace RiskAnalysis.Infrastructure.Services;
 public class PortfolioService : IPortfolioService
 {
     private readonly RiskAnalysisDbContext _db;
+    private readonly IAuditService _audit;
+    private readonly ICurrentUser _currentUser;
 
-    public PortfolioService(RiskAnalysisDbContext db) => _db = db;
+    public PortfolioService(
+        RiskAnalysisDbContext db, IAuditService audit, ICurrentUser currentUser)
+    {
+        _db = db;
+        _audit = audit;
+        _currentUser = currentUser;
+    }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<PortfolioView>> GetAllAsync(
@@ -181,12 +191,20 @@ public class PortfolioService : IPortfolioService
             Description = request.Description,
             BaseCurrency = request.BaseCurrency,
             BenchmarkInstrumentId = request.BenchmarkInstrumentId,
+
+            // Владелец портфеля — пользователь, создавший его. Сведения
+            // применяются при разграничении прав на изменение состава.
+            OwnerUserId = _currentUser.Id,
             CreatedAt = now,
             UpdatedAt = now
         };
 
         _db.Portfolios.Add(portfolio);
         await _db.SaveChangesAsync(cancellationToken);
+
+        await _audit.RecordAsync(
+            AuditAction.Create, "Portfolio", portfolio.Id.ToString(),
+            $"Создан портфель «{portfolio.Name}»", cancellationToken);
 
         return (await GetAsync(portfolio.Id, cancellationToken))!;
     }
@@ -203,6 +221,8 @@ public class PortfolioService : IPortfolioService
             return null;
         }
 
+        EnsureCanModify(portfolio);
+
         await ValidateBenchmarkAsync(request.BenchmarkInstrumentId, cancellationToken);
 
         portfolio.Name = request.Name.Trim();
@@ -212,6 +232,10 @@ public class PortfolioService : IPortfolioService
         portfolio.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync(cancellationToken);
+
+        await _audit.RecordAsync(
+            AuditAction.Update, "Portfolio", portfolio.Id.ToString(),
+            $"Изменены реквизиты портфеля «{portfolio.Name}»", cancellationToken);
 
         return await GetAsync(portfolioId, cancellationToken);
     }
@@ -227,8 +251,17 @@ public class PortfolioService : IPortfolioService
             return false;
         }
 
+        EnsureCanModify(portfolio);
+
+        var name = portfolio.Name;
+
         _db.Portfolios.Remove(portfolio);
         await _db.SaveChangesAsync(cancellationToken);
+
+        await _audit.RecordAsync(
+            AuditAction.Delete, "Portfolio", portfolioId.ToString(),
+            $"Удалён портфель «{name}» вместе с позициями и историей расчётов",
+            cancellationToken);
 
         return true;
     }
@@ -244,6 +277,8 @@ public class PortfolioService : IPortfolioService
         {
             return null;
         }
+
+        EnsureCanModify(portfolio);
 
         if (request.Quantity <= 0m)
         {
@@ -281,6 +316,17 @@ public class PortfolioService : IPortfolioService
 
         await _db.SaveChangesAsync(cancellationToken);
 
+        var ticker = await _db.Instruments
+            .Where(i => i.Id == request.InstrumentId)
+            .Select(i => i.Ticker)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        await _audit.RecordAsync(
+            AuditAction.Create, "Position", portfolioId.ToString(),
+            $"В портфель «{portfolio.Name}» добавлена позиция {ticker}: " +
+            $"{request.Quantity:N0} ед. по цене {request.PurchasePrice:N2}",
+            cancellationToken);
+
         return await GetAsync(portfolioId, cancellationToken);
     }
 
@@ -288,6 +334,16 @@ public class PortfolioService : IPortfolioService
     public async Task<PortfolioView?> RemovePositionAsync(
         int portfolioId, int positionId, CancellationToken cancellationToken = default)
     {
+        var portfolio = await _db.Portfolios
+            .FirstOrDefaultAsync(p => p.Id == portfolioId, cancellationToken);
+
+        if (portfolio is null)
+        {
+            return null;
+        }
+
+        EnsureCanModify(portfolio);
+
         var position = await _db.Positions
             .FirstOrDefaultAsync(
                 p => p.Id == positionId && p.PortfolioId == portfolioId, cancellationToken);
@@ -297,10 +353,47 @@ public class PortfolioService : IPortfolioService
             return null;
         }
 
+        var instrumentId = position.InstrumentId;
+
         _db.Positions.Remove(position);
         await _db.SaveChangesAsync(cancellationToken);
 
+        var removedTicker = await _db.Instruments
+            .Where(i => i.Id == instrumentId)
+            .Select(i => i.Ticker)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        await _audit.RecordAsync(
+            AuditAction.Delete, "Position", portfolioId.ToString(),
+            $"Из портфеля удалена позиция {removedTicker}", cancellationToken);
+
         return await GetAsync(portfolioId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Проверяет право текущего пользователя изменять портфель.
+    ///
+    /// Правило: изменять состав портфеля вправе создавший его пользователь
+    /// и администратор. Такое разграничение отвечает принятому порядку
+    /// работы: аналитик отвечает за ведение закреплённых за ним портфелей,
+    /// но знакомится с результатами расчётов по всем портфелям организации.
+    ///
+    /// Портфель, владелец которого не установлен, считается общим и доступен
+    /// для изменения любому аналитику. Такие портфели возникают при переходе
+    /// с версии системы, не содержавшей подсистемы удостоверения личности.
+    /// </summary>
+    private void EnsureCanModify(Portfolio portfolio)
+    {
+        if (portfolio.OwnerUserId is null ||
+            portfolio.OwnerUserId == _currentUser.Id ||
+            _currentUser.IsInRole(ApplicationRoles.Administrator))
+        {
+            return;
+        }
+
+        throw new AccessDeniedException(
+            $"Портфель «{portfolio.Name}» закреплён за другим пользователем. " +
+            "Изменение состава портфеля доступно его владельцу и администратору.");
     }
 
     private async Task ValidateBenchmarkAsync(int? benchmarkId, CancellationToken cancellationToken)

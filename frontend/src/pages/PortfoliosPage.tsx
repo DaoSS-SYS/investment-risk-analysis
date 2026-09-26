@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
 import { api, describeError } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import { formatMoney, formatPercent } from '../lib/format'
 
 interface FormValues {
@@ -33,6 +34,7 @@ interface FormValues {
 export default function PortfoliosPage() {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const { canManagePortfolios } = useAuth()
   const [open, setOpen] = useState(false)
   const [form] = Form.useForm<FormValues>()
 
@@ -79,9 +81,11 @@ export default function PortfoliosPage() {
           Инвестиционные портфели
         </Typography.Title>
 
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-          Создать портфель
-        </Button>
+        {canManagePortfolios && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            Создать портфель
+          </Button>
+        )}
       </Space>
 
       {portfolios.data && portfolios.data.length === 0 && !portfolios.isLoading && (

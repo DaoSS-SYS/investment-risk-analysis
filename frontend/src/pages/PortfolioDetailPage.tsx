@@ -37,6 +37,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { api, describeError } from '../api/client'
 import OptimizationPanel from '../components/OptimizationPanel'
 import StressTestPanel from '../components/StressTestPanel'
+import { useAuth } from '../auth/AuthContext'
 import type { Position, PositionRiskContribution, VarResult } from '../api/types'
 import {
   describeVarMethod,
@@ -64,6 +65,7 @@ export default function PortfolioDetailPage() {
 
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const { canManagePortfolios } = useAuth()
 
   const [positionOpen, setPositionOpen] = useState(false)
   const [form] = Form.useForm<PositionFormValues>()
@@ -168,6 +170,7 @@ export default function PortfolioDetailPage() {
       title: '',
       width: 50,
       align: 'right',
+      hidden: !canManagePortfolios,
       render: (_, record) => (
         <Popconfirm
           title="Удалить позицию?"
@@ -329,9 +332,11 @@ export default function PortfolioDetailPage() {
             Отчёт Excel
           </Button>
 
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setPositionOpen(true)}>
-            Добавить позицию
-          </Button>
+          {canManagePortfolios && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setPositionOpen(true)}>
+              Добавить позицию
+            </Button>
+          )}
         </Space>
       </Space>
 

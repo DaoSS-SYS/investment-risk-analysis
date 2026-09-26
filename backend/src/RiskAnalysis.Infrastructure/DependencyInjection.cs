@@ -4,7 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RiskAnalysis.Application.Abstractions;
 using RiskAnalysis.Infrastructure.BackgroundProcessing;
+using Microsoft.AspNetCore.Identity;
 using RiskAnalysis.Infrastructure.ExternalData.Cbr;
+using RiskAnalysis.Infrastructure.Identity;
 using RiskAnalysis.Infrastructure.ExternalData.Moex;
 using RiskAnalysis.Infrastructure.Persistence;
 using RiskAnalysis.Infrastructure.Services;
@@ -37,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<IStressTestService, StressTestService>();
         services.AddScoped<IPortfolioOptimizationService, PortfolioOptimizationService>();
         services.AddScoped<IReportService, ReportService>();
+
+        AddIdentity(services, configuration);
 
         // Очередь асинхронных расчётов существует в единственном экземпляре
         // на всё приложение; обработчик очереди — фоновая служба.
@@ -90,5 +94,40 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(60);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("RiskAnalysis/1.0 (VKR)");
         });
+    }
+
+    /// <summary>
+    /// Регистрация подсистемы удостоверения личности.
+    /// </summary>
+    private static void AddIdentity(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.AddSingleton<TokenService>();
+
+        services.AddIdentityCore<ApplicationUser>(options =>
+            {
+                // Требования к паролю соответствуют общепринятым:
+                // не менее восьми знаков, наличие строчных, прописных букв
+                // и цифр. Требование особых знаков не предъявляется:
+                // оно повышает сложность запоминания, не повышая
+                // устойчивости к подбору соразмерно.
+                options.Password.RequiredLength = 8;
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = false;
+
+                options.User.RequireUniqueEmail = false;
+
+                // Временная блокировка при последовательных неудачных
+                // попытках входа препятствует подбору пароля.
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
+            .AddRoles<ApplicationRole>()
+            .AddEntityFrameworkStores<RiskAnalysisDbContext>();
+
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAuditService, AuditService>();
     }
 }

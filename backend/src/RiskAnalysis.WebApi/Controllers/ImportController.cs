@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RiskAnalysis.Application.Abstractions;
 using RiskAnalysis.Application.Models;
+using RiskAnalysis.Infrastructure.Identity;
 using RiskAnalysis.Infrastructure.Persistence;
 
 namespace RiskAnalysis.WebApi.Controllers;
@@ -12,6 +14,7 @@ namespace RiskAnalysis.WebApi.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[Authorize(Policy = AuthorizationPolicies.ManageReferenceData)]
 public class ImportController : ControllerBase
 {
     private readonly RiskAnalysisDbContext _db;
