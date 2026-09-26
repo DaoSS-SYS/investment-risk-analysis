@@ -1,0 +1,135 @@
+# Составление системы из трёх служб: хранилище данных, серверная часть,
+# клиентская часть.
+#
+# Параметры, составляющие тайну — пароль к базе данных, ключ подписи
+# маркеров доступа, пароль учётной записи администратора — в настоящем
+# файле не содержатся. Они берутся из файла .env, который не включён
+# в репозиторий. Образец состава такого файла приведён в .env.example.
+
+name: riskanalysis
+
+services:
+  # ---------------------------------------------------------------------------
+  # Система управления базами данных
+  # ---------------------------------------------------------------------------
+  database:
+    image: postgres:17-alpine
+    container_name: riskanalysis-database
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-riskanalysis}
+      POSTGRES_USER: ${POSTGRES_USER:-riskanalysis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?не задан пароль к базе данных, см. .env.example}
+
+      # Сопоставление и классификация знаков задаются явно. Без этого
+      # порядок сортировки строковых величин зависел бы от настроек
+      # образа, а он различается между его версиями.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+
+    volumes:
+      # Данные хранятся в именованном томе, а не внутри контейнера:
+      # контейнер может быть пересоздан при обновлении образа, том
+      # при этом сохраняется. Без тома история котировок терялась бы
+      # при каждом обновлении приложения.
+      - database-data:/var/lib/postgresql/data
+
+    # Порт публикуется для возможности подключения средствами
+    # администрирования базы данных. Выбран 5433, а не 5432: на машине
+    # разработчика на стандартном порту, как правило, уже выполняется
+    # другой экземпляр СУБД.
+    ports:
+      - "${DATABASE_PORT:-5433}:5432"
+
+    # Проверка готовности принимать соединения. Серверная часть
+    # запускается только после её успешного прохождения: попытка
+    # применить миграции к ещё не запущенной СУБД завершилась бы отказом.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-riskanalysis} -d ${POSTGRES_DB:-riskanalysis}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+    networks: [riskanalysis]
+
+  # ---------------------------------------------------------------------------
+  # Серверная часть
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: riskanalysis-backend
+    restart: unless-stopped
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+
+      # Вложенность разделов настройки передаётся двойным знаком
+      # подчёркивания: ConnectionStrings__Default соответствует разделу
+      # ConnectionStrings, параметру Default.
+      ConnectionStrings__Default: "Host=database;Port=5432;Database=${POSTGRES_DB:-riskanalysis};Username=${POSTGRES_USER:-riskanalysis};Password=${POSTGRES_PASSWORD}"
+
+      # Обращение к базе данных выполняется по имени службы database:
+      # оно разрешается в адрес контейнера средствами сети составления.
+
+      # В контейнере выполнить команду применения миграций вручную негде,
+      # поэтому они применяются при запуске приложения.
+      Database__MigrateOnStartup: "true"
+
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?не задан ключ подписи маркеров доступа, см. .env.example}
+      Jwt__LifetimeHours: ${JWT_LIFETIME_HOURS:-12}
+
+      Seed__AdministratorPassword: ${ADMIN_PASSWORD:?не задан пароль учётной записи администратора, см. .env.example}
+
+      # Документация программного интерфейса включается для показа
+      # системы. При действительном промышленном размещении её следует
+      # выключить: перечень методов облегчает изучение системы посторонним.
+      Swagger__Enabled: "${SWAGGER_ENABLED:-true}"
+
+      # Разделение ресурсов между источниками не задействуется:
+      # обращения к программному интерфейсу приходят через сервер отдачи
+      # статических файлов, то есть с того же адреса, с которого
+      # загружено клиентское приложение.
+
+    depends_on:
+      database:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Первая проверка откладывается: при первом запуске приложение
+      # применяет миграции и создаёт учётную запись администратора.
+      start_period: 60s
+
+    networks: [riskanalysis]
+
+  # ---------------------------------------------------------------------------
+  # Клиентская часть
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: riskanalysis-frontend
+    restart: unless-stopped
+
+    ports:
+      - "${APP_PORT:-8080}:80"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    networks: [riskanalysis]
+
+volumes:
+  database-data:
+
+networks:
+  riskanalysis:
+    driver: bridge

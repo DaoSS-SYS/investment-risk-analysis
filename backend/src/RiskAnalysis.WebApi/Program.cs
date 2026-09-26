@@ -164,7 +164,11 @@ var app = builder.Build();
 // ---------------------------------------------------------------------------
 app.UseSerilogRequestLogging();
 
-if (app.Environment.IsDevelopment())
+// Документация программного интерфейса. По умолчанию доступна в среде
+// разработки; параметр Swagger:Enabled позволяет включить её и при
+// размещении приложения — для показа системы и проверки интерфейса
+// без клиентского приложения.
+if (app.Configuration.GetValue("Swagger:Enabled", app.Environment.IsDevelopment()))
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
@@ -182,9 +186,54 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();
 
-// Создание ролей и учётной записи администратора при первом запуске.
+// ---------------------------------------------------------------------------
+// Подготовка хранилища данных при запуске
+// ---------------------------------------------------------------------------
 using (var scope = app.Services.CreateScope())
 {
+    // Применение миграций при запуске. В среде разработки миграции
+    // применяются вручную командой dotnet ef database update, поэтому
+    // по умолчанию этот порядок выключен. При размещении в контейнере
+    // выполнить команду вручную негде, и параметр включается.
+    //
+    // Ограничение порядка: при одновременном запуске нескольких
+    // экземпляров приложения миграции попытались бы примениться
+    // одновременно. Для рассматриваемой системы это несущественно —
+    // экземпляр один; при переходе к нескольким экземплярам применение
+    // миграций следует выделить в отдельный шаг развёртывания.
+    var startupLogger = scope.ServiceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("RiskAnalysis.Startup");
+
+    if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
+    {
+        var db = scope.ServiceProvider.GetRequiredService<RiskAnalysisDbContext>();
+        var pending = (await db.Database.GetPendingMigrationsAsync()).ToArray();
+
+        if (pending.Length > 0)
+        {
+            startupLogger.LogInformation(
+                "Применение миграций базы данных: {Count} шт. — {Migrations}",
+                pending.Length, string.Join(", ", pending));
+
+            await db.Database.MigrateAsync();
+
+            startupLogger.LogInformation("Миграции применены.");
+        }
+        else
+        {
+            startupLogger.LogInformation(
+                "Схема базы данных актуальна, миграции не требуются.");
+        }
+    }
+    else
+    {
+        startupLogger.LogInformation(
+            "Применение миграций при запуске выключено " +
+            "(параметр Database:MigrateOnStartup).");
+    }
+
+    // Создание ролей и учётной записи администратора при первом запуске.
     var auth = scope.ServiceProvider.GetRequiredService<IAuthService>();
     await auth.EnsureSeedDataAsync();
 }
